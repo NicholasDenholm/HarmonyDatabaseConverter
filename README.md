@@ -17,9 +17,9 @@
 
 
 It should look like this:
-'''DatabaseConverter.exe
-├── output
-├── input
+'''DatabaseConverter.exe'''
+'''├── output'''
+'''├── input'''
 │   ├── Experiment1
 │   │   ├── OPOtoxicityIF_OPC__2024-07-31T14_12_17-Measurement 1
 │   │   │   ├── Index.txt  **<-- Index_file is important!**
