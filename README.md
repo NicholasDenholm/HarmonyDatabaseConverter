@@ -15,7 +15,7 @@
 - Place these into a new experiment folder in the `input` directory where you found this app.  
   **Make sure that there are no other overlapping experiment data in the same folder.**
 
-
+'''
 It should look like this:
 DatabaseConverter.exe
 ├── output
@@ -30,7 +30,7 @@ DatabaseConverter.exe
 │   ├── Experiment2
 │   ├── Experiment3
 │   └── ...
-
+'''
 
 ### Step 2: Create Output Folder
 
@@ -40,20 +40,20 @@ DatabaseConverter.exe
 - So make seperate folders according to plate 
 
 - It should look something like this:
-
+'''
 DatabaseConverter.exe
 ├── output
 ├── input
 │   ├── Experiment1
 |   ├── Experiment2
 |   | .....
-
+'''
 
 ### Step 3: Place Image Folders
 
 - Place your image folders from each plate into their own folder as well. 
 - It should look like this when you're done:
-
+'''
 DatabaseConverter.exe
 ├── Images
 │   ├── OPOtoxicityIF_OPC__2024-07-31T14_12_17-Measurement 1
@@ -74,7 +74,7 @@ DatabaseConverter.exe
 │   ├── Experiment1
 │   ├── Experiment2
 │   └── ...
-
+'''
 
 Now, you're all set up to run the program.
 
