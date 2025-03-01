@@ -131,5 +131,6 @@ Good luck!
 
 - If you edit the source code and need to remake the application, run this command in the project folder:
 
-
+```
 pyinstaller --onefile --add-data "PropertiesFileTemplate.ini;." main.py
+```
