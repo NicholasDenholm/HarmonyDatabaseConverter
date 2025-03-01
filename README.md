@@ -15,9 +15,9 @@
 - Place these into a new experiment folder in the `input` directory where you found this app.  
   **Make sure that there are no other overlapping experiment data in the same folder.**
 
-'''
+
 It should look like this:
-DatabaseConverter.exe
+'''DatabaseConverter.exe
 ├── output
 ├── input
 │   ├── Experiment1
@@ -29,8 +29,7 @@ DatabaseConverter.exe
 │   │   │       └── PlateResults
 │   ├── Experiment2
 │   ├── Experiment3
-│   └── ...
-'''
+│   └── ...'''
 
 ### Step 2: Create Output Folder
 
