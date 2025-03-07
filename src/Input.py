@@ -16,23 +16,19 @@ class Input:
         self.db_type = None
         self.db_path = None
         self.table_name = None
-
         self.plate_data = {}
-
         cleanup_file_list = None
 
     def run(self):
         self.set_input_folder()
         self.set_input_files()
 
-        #TODO test
         self.set_image_folder()
         self.set_image_files()
 
         self.set_output_folder()
         self.set_database_info()
         self.check_database()
-        #self.set_table_name()
         print("\n----Input methods done----\n")
 
     #--------------------Setters----------------------------
@@ -267,47 +263,6 @@ class Input:
         else:
             return input_str  # Return the original string if "Row" is not found
 
-    def convert_txt_to_csv_v1 (self, input_files:list, delimiter = '\t'):
-        """
-        Converts a list of text files to CSV files.
-
-        Parameters:
-        - input_files (list of str): List of paths to the .txt files to be converted.
-        - delimiter (str): The delimiter used in the .txt files.
-
-        Returns:
-        - list of str: List of paths to the resulting .csv files.
-        """
-        csv_files = []
-
-        for txt_file in input_files:
-            # Ensure the file has a .txt extension
-            if not txt_file.lower().endswith('.txt'):
-                print(f"Skipping non-txt file: {txt_file}")
-                continue
-            
-            # Read the contents of the original file
-            with open(txt_file, 'r') as file:
-                lines = file.readlines()
-            
-            # Define the path for the new CSV file
-            base_directory = os.path.dirname(txt_file)
-            csv_file_path = os.path.join(base_directory, os.path.basename(txt_file).replace('.txt', '.csv').replace(' - ', '').replace(' ', ''))
-            
-            # Write the processed data to the CSV file
-            with open(csv_file_path, 'w', newline='') as csvfile:
-                writer = csv.writer(csvfile)
-                for line in lines:
-                    # Split each line using the defined delimiter
-                    row = line.strip().split(delimiter)
-                    # Write the row to the CSV file
-                    writer.writerow(row)
-            
-            csv_files.append(csv_file_path)
-            print(f'File saved as CSV at: {csv_file_path}')
-        
-        self.input_files = csv_files
-
     def set_output_folder(self):
 
         # Getting the output folder
@@ -359,12 +314,6 @@ class Input:
             else:
                 g.msgbox(errmsg, title="Input Error")
                 
-
-        #self.db_name = fieldValues1[0]
-        #self.db_type = buttonvalues[0]
-
-        #self.db_path = os.path.join(self.output_folder, self.db_name)
-
     def database_type(self):
         
         msg = "Choose your database type"
@@ -391,7 +340,6 @@ class Input:
         if db_type is None:
             print("Error with db type")
             return  # Exit if user cancels the selection for database type
-
 
         # Set attributes
         self.db_name = db_name

@@ -73,11 +73,9 @@ class TableLinker:
                 self.image_size_finder(self.table_names[0])
 
             else: # object tables
-
                 self.object_tables.append(table)
 
                 cur_channel_name = self.channel_link_to_table[self.table_name] # 'HOECHST 33342' or 'Alexa 647'
-
                 channel_number = self.result_dict[cur_channel_name]
                 '''
                 #self.add_column_to_object_table(cur_channel_name, "ImageNumber")
@@ -154,9 +152,6 @@ class TableLinker:
                 self.progress_bar.update(1) 
 
             # Copy values from ObjectNo to the new column
-            
-            #TODO Copy values makes new tables that are not NUMERIC and thus the measuremetns cant be added in.
-            
             #TODO This method is slow
             self.copy_column_values("ObjectNo", object_count_col_name, table_name)
             #self.copy_column_values_fast("ObjectNo", object_count_col_name, table_name)
@@ -214,16 +209,6 @@ class TableLinker:
             if updates:
                 self.update_image_table_batch(updates)  # Pass the updates to the batch method
                 
-            '''
-            # Iterate through the counts and update the ImageTable
-            for well_id, fields_and_counts_list in self.table_and_object_count.items():
-                print(fields_and_counts_list)
-                for field, count in fields_and_counts_list:
-                    self.update_image_table(well_id, field, count, obj_sum_col)
-
-            #self.update_nulls_in_col(table_name, 0, object_count_col_name)
-            #self.update_nulls_in_col("ImageTable", 0, obj_sum_col)
-            '''
             if self.progress_bar:
                 self.progress_bar.update(1)
 
@@ -278,12 +263,8 @@ class TableLinker:
 
             # Now call the optimized batch processing method for all measurements in the batch
             if batch_updates:
-                # TODO this doesnt work
+
                 self.update_image_table_batch(batch_updates)
-            
-            # Now call the optimized batch processing method
-            # TODO this only updates the first column with the last measurments values!!
-            #self.optimize_and_process_batch(obj_table, batch_updates)
 
             if self.progress_bar:
                 self.progress_bar.update(1) 
@@ -357,9 +338,6 @@ class TableLinker:
     def create_variable_selector(self, test_mode=False):
         # If in test mode, just set the variables and return immediately
         if test_mode:
-            # Hardcoded channel-table pairings for test mode
-            #self.channels = ['HOECHST 33342', 'Alexa 647', 'Alexa 488narrow']
-            #self.channel_link_to_table = {'Hoechst': 'HOECHST 33342', 'O4Final': 'Alexa 647', 'PDGFSelected': 'Alexa 488narrow'}
 
             # Hardcoded channel-table pairings for test mode
             self.channels = ['HOECHST 33342', 'Alexa 647', 'Alexa 488narrow']
@@ -439,20 +417,15 @@ class TableLinker:
             cursor = connection.cursor()
 
             # Execute query to retrieve rows and columns
-            #cursor.execute(f"SELECT FROM ChannelName = {channel}, ImageNumber, Image_Path, Image_URL FROM {table};")
             cursor.execute(f"SELECT ImageNumber, Image_Path, Image__URL FROM {table} WHERE ChannelName = ?;", (channel,))
             # Fetch all rows (ChannelName, ImageNumber, Image_Path_table, Image_URL_table) from the result set
             rows = cursor.fetchall()
 
             for row in rows:
-                #channelName, image_number, image_path, image_URL = row
-                #cursor.execute(f"UPDATE {table} SET {col1} = ?, {col2} = ? WHERE {channel} = ? AND ImageNumber = ?;",(image_path, image_URL, channelName, image_number))
-                
                 image_number, image_path, image_URL = row
                 
                 cursor.execute(f"UPDATE {table} SET {col1} = ?, {col2} = ? WHERE ChannelName = ? AND ImageNumber = ?;",
                     (image_path, image_URL, channel, image_number))
-
 
             connection.commit()
 
@@ -478,15 +451,11 @@ class TableLinker:
             # Check if ImageTable exists
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ImageTable';")
             exists = cursor.fetchone()
-        
-
-            # idea: # Use regex to extract the file name
-            # file_name = re.search(r'[^\\]+$', path)
 
             if (exists):
                 cursor.execute(f"SELECT ImageNumber, Image__URL_{channel} FROM {table};")
 
-                 # Fetch all rows (ImageNumber, Row, Column, Field, Image_Path_table, Image_URL_table) from the result set
+                # Fetch all rows (ImageNumber, Row, Column, Field, Image_Path_table, Image_URL_table) from the result set
                 rows = cursor.fetchall()
 
                 for row in rows:
@@ -509,7 +478,6 @@ class TableLinker:
 
         except sqlite3.Error as e:
             print(f"An error occurred: {e}")
-            #connection.rollback()
             
         finally:
             if connection:
@@ -701,77 +669,6 @@ class TableLinker:
 
         return averages
     
-    def optimize_and_process_batch(self, obj_table, batch_updates):
-        """
-        Process the batch of updates and perform a batch update on the ImageTable.
-
-        Args:
-            measure_list (list): List of measurement names.
-            measurements (list): List of measurement columns.
-            obj_table (str): The object table to update.
-            batch_updates (list): List of tuples (measure_name, measurement_column).
-        """
-        try:
-            # Example of processing the batch updates
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-
-                # Loop through the batch updates and create a query for each measurement column
-                for measure_name, measurement_column in batch_updates:
-                    query = f"""
-                    UPDATE ImageTable
-                    SET {measurement_column} = ?
-                    WHERE {obj_table} = ?;
-                    """
-                    # Prepare the data for the update
-                    data_to_update = [(measure_name, obj_table)]  # Example, adjust this as needed
-                    cursor.executemany(query, data_to_update)
-
-                # Commit all the changes in the batch
-                conn.commit()
-                print(f"Batch update completed for {obj_table}")
-
-        except sqlite3.Error as e:
-            print(f"SQLite error during batch update: {e}")
-
-
-    def optimize_and_process_batch_test(self, measure_list, measurements, obj_table):
-        """
-        Optimized version to calculate mean values for each measurement column and update the database in batches.
-
-        Args:
-            measure_list (list): List of measurement columns to process.
-            measurements (list): List of measurement column names corresponding to `measure_list`.
-            obj_table (str): The name of the object table where measurements are stored.
-        """
-        # Initialize a list to collect all batch updates
-        batch_updates = []
-
-        # Process each measure (calculation of mean per well and field)
-        for index in range(len(measure_list)):
-            measure_name = measure_list[index]
-            measurement_column = measurements[index]
-
-            print(f"Calculating mean for: {measure_name}")
-            
-            # Step 1: Calculate the mean values for the current measure
-            mean_values = self.calculate_average_per_well_and_field(obj_table, measure_name)
-
-            # Step 2: Collect updates for all wells and fields into the batch
-            for well, values in mean_values.items():
-                for field_id, mean_measurement in values:
-                    # Collect updates for all measurements in the batch_updates list
-                    batch_updates.append((well, field_id, mean_measurement, measurement_column))
-
-        # Step 3: Perform a single batch update for all collected updates
-        if batch_updates:
-            # Count the unique measurements (only focus on the measurement column)
-            unique_measurements = (set(update[3] for update in batch_updates))
-            print(f"Performing batch update for {unique_measurements}")
-            self.update_image_table_batch(batch_updates)  # Assuming this method handles batch updates
-            batch_updates.clear()  # Clear the batch after performing the update
-
-        print(f"{obj_table} and columns {', '.join(measure_list)} successfully updated with mean values\n")
 
     # COUNT works here!!
     def update_image_table_batch(self, batch_updates):
@@ -785,9 +682,6 @@ class TableLinker:
             # Ensure the column name is valid and part of the query
             if not batch_updates:
                 return
-
-            # Get the first tuple to extract the column name (assuming all tuples use the same column)
-            #measurement_column = batch_updates[0][3]  # This is the column name from the tuple
 
             # Open the database connection
             with sqlite3.connect(self.db_path) as conn:
@@ -969,6 +863,7 @@ class TableLinker:
         except sqlite3.Error as error:
             print(f"Error while adding the column '{col_to_add}' in table '{table_name}': {error}")
 
+    # NOT used
     def drop_column_in_table_fast(self, table_name: str, col_to_del: str):
         try:
             with sqlite3.connect(self.db_path) as connection:
@@ -1072,12 +967,9 @@ class TableLinker:
             else:
                 print(f"\n{col_to_alter} column exists")
                 
-
             # Insert data into the specified table
             for plate_label, images in image_info.items():
-                #print(f"{plate_label}\n", images)
                 for image, key in images.items():
-                    #print(f"Image is: {image}, key is: {key}")
                     row_number = key[0]
                     column_number = key[1]
                     field_number = key[2]
@@ -1085,11 +977,8 @@ class TableLinker:
                     folder = self.image_fodlers[plate_label-1] #
                     # key = (Row, Column, Field, Plane, ChannelID, Sequence)
                     # Now update the ImageNumber based on the stored mapping
-            
                     cursor.execute(f"UPDATE {self.table_name} SET {col_to_alter} = ? WHERE Row = ? AND Column = ? AND Field = ? AND ChannelID = ?;",
                                 (folder, row_number, column_number, field_number, channel_number))
-                    #cursor.execute(f'''INSERT INTO {table_name} (image_url, row, col, field, position, channel, cycle) VALUES (?, ?, ?, ?, ?, ?) ''', (image, *key)) 
-                    #cursor.execute(f'''INSERT INTO {table_name} (Row, Column, Field, Plane, ChannelID, Sequence) VALUES (?, ?, ?, ?, ?, ?) ''', key)
 
             # Commit changes and close the connection
             connection.commit()
@@ -1138,6 +1027,7 @@ class TableLinker:
             # Close the database connection
             conn.close()
     
+    # NOT used
     def copy_column_values_fast(self, source_column, target_column, table_name):
         """
         Copy values from one column to another in the specified table.
@@ -1247,152 +1137,7 @@ class TableLinker:
                 cursor.close()
             if connection:
                 connection.close()
-    
-    
 
-    def add_column_list_in_batches_to_object_table(self, channel_number: int, new_cols: list, batch_size: int = 20000):
-        """
-        Adds multiple columns to each object table and updates them in batches.
-        """
-        try:
-            # Open a connection to the database
-            with sqlite3.connect(self.db_path) as connection:
-                cursor = connection.cursor()
-
-                # TODO this method is super slow for datasets that are of 30k rows + How to fix?
-
-                # Disable synchronous mode for performance
-                cursor.execute("PRAGMA synchronous = OFF;")
-                cursor.execute("PRAGMA journal_mode = MEMORY;")
-
-                # Check if columns already exist, and add them if not
-                cursor.execute(f"PRAGMA table_info({self.table_name});")
-                existing_columns = {column[1] for column in cursor.fetchall()}
-
-                for new_col in new_cols:
-                    if new_col not in existing_columns:
-                        cursor.execute(f"ALTER TABLE {self.table_name} ADD COLUMN {new_col} {self.column_data_type};")
-                        print(f"Added column {new_col}")
-                    else:
-                        print(f"{new_col} column already exists")
-
-                # Initialize the start index for the batch processing
-                offset = 0
-                cursor.execute("BEGIN TRANSACTION;")  # Start a transaction
-
-                while True:
-                    # Fetch a batch of data from the index table and join with the main table
-                    placeholders = ', '.join([f"i.{col}" for col in new_cols])  # Generate placeholders for new columns
-                    query = f"""
-                        SELECT t.Row, t.Column, t.Field, {placeholders}
-                        FROM {self.table_name} t
-                        LEFT JOIN {self.table_names[0]} i
-                        ON t.Row = i.Row AND t.Column = i.Column AND t.Field = i.Field
-                        WHERE i.ChannelID = ?
-                        LIMIT ? OFFSET ?
-                    """
-                    cursor.execute(query, (channel_number, batch_size, offset))
-                    rows_to_update = cursor.fetchall()
-
-                    # If there are no rows to update, we're done
-                    if not rows_to_update:
-                        break
-
-                    # Prepare data for the batch update
-                    update_data = []
-                    for row_number, column_number, field_number, *new_vals in rows_to_update:
-                        
-                        update_data.append([*new_vals, row_number, column_number, field_number])
-
-                        # Ensure we only include values that are not None for the columns we are updating
-                        #values_to_update = [new_val for new_val in new_vals]
-                        
-                        # Only add entries where there is at least one non-None value
-                        #if any(v is not None for v in values_to_update):
-                            #update_data.append(values_to_update + [row_number, column_number, field_number])
-
-                    # Perform the bulk update for this batch
-                    if update_data:
-                        # Generate dynamic SET clause for all new columns
-                        set_clause = ', '.join([f"{col} = ?" for col in new_cols])
-                        cursor.executemany(f"""
-                            UPDATE {self.table_name}
-                            SET {set_clause}
-                            WHERE Row = ? AND Column = ? AND Field = ?
-                        """, update_data)
-
-                    # Commit the changes for this batch
-                    #connection.commit()
-                    print(f"Batch of {len(rows_to_update)} rows updated.")
-
-                    # Move the offset forward for the next batch
-                    offset += batch_size
-
-                connection.commit()  # Commit all changes at once
-                print(f"The columns {', '.join(new_cols)} updated successfully.")
-
-        except sqlite3.Error as error:
-            print(f"Error occurred while adding and updating columns: {error}")
-
-
-    def add_column_list_to_object_table(self, channel_name: str, new_cols: list):
-        """
-        Adds multiple columns to each object table and updates them in one operation.
-        """
-        try:
-            # Open a connection to the database
-            with sqlite3.connect(self.db_path) as connection:
-                cursor = connection.cursor()
-
-                # Check if columns already exist, and add them if not
-                cursor.execute(f"PRAGMA table_info({self.table_name});")
-                existing_columns = {column[1] for column in cursor.fetchall()}
-
-                for new_col in new_cols:
-                    if new_col not in existing_columns:
-                        cursor.execute(f"ALTER TABLE {self.table_name} ADD COLUMN {new_col} {self.column_data_type};")
-                        print(f"Added column {new_col}")
-                    else:
-                        print(f"{new_col} column already exists")
-
-                # Fetch the data from the index table and join with the main table in a single query
-                placeholders = ', '.join([f"i.{col}" for col in new_cols])  # Generate placeholders for new columns
-                query = f"""
-                    SELECT t.Row, t.Column, t.Field, {placeholders}
-                    FROM {self.table_name} t
-                    LEFT JOIN {self.table_names[0]} i
-                    ON t.Row = i.Row AND t.Column = i.Column AND t.Field = i.Field
-                    WHERE i.ChannelName = ?
-                """
-                cursor.execute(query, (channel_name,))
-                rows_to_update = cursor.fetchall()
-
-                # Prepare data for bulk update
-                update_data = []
-                for row_number, column_number, field_number, *new_vals in rows_to_update:
-                    # Ensure we only include values that are not None for the columns we are updating
-                    values_to_update = [new_val for new_val in new_vals]
-                    
-                    # Only add entries where there is at least one non-None value
-                    if any(v is not None for v in values_to_update):
-                        update_data.append(values_to_update + [row_number, column_number, field_number])
-
-                # Perform bulk update in one operation
-                if update_data:
-                    # Generate dynamic SET clause for all new columns
-                    set_clause = ', '.join([f"{col} = ?" for col in new_cols])
-                    cursor.executemany(f"""
-                        UPDATE {self.table_name}
-                        SET {set_clause}
-                        WHERE Row = ? AND Column = ? AND Field = ?
-                    """, update_data)
-
-                # Commit the changes
-                connection.commit()
-                print(f"The columns {', '.join(new_cols)} updated successfully.")
-
-        except sqlite3.Error as error:
-            print(f"Error occurred while adding and updating columns: {error}")
 
     def drop_table(self, table_name):
         """
@@ -1627,272 +1372,6 @@ class TableLinker:
         except sqlite3.Error as e:
             print(f"SQLite error when trying to fix nulls in columns '{', '.join(columns)}': {e}")
     
-    
-    #--------------------Old_Attempts----------------------
-    
-    def image_files_splitter(self):
-
-        tables_to_channels = self.get_channel_link_to_table() # obj_hoechst : Hoechst 55887
-        num_channels_to_process = len(tables_to_channels)
-
-        channel_id_reference = {}
-        
-        idx=0
-        # build ChannelID number reference
-        for table_name, channel_info in tables_to_channels.items():
-            if idx >= num_channels_to_process:
-                break  # Exit the loop if we reach the desired number of channels
-            # Step 5: Verify insertion by selecting the data back
-            try:
-                connection = sqlite3.connect(self.db_path)
-                cursor = connection.cursor()
-
-                cursor.execute(f"SELECT ChannelID FROM {self.table_names[0]};")
-
-                #TODO just find the first instance of that
-                rows = cursor.fetchall()
-
-                # TODO add to a reference list
-                for row in rows:
-                    if len(channel_id_reference) < num_channels_to_process:
-                        channel_id_reference[table_name] = row[0]  # Append the first element of the tuple
-                    else:
-                        break  # Stop if we already have 3 values
-
-                        #channel_id_reference.append(row[0])  
-                        #idx=+1
-
-            except Exception as e:
-                print(f"An error occurred while selecting: {e}")
-
-        print(channel_id_reference)
-        print("")
-        
-
-    def add_column_to_object_table_slow_1st(self, channel_name:str, new_col:str):
-
-        """
-        Adds any column to each object table and matches col,row,field to the image numbers
-        in the index file corresponding to the proper channel.
-        """
-        try:
-            connection = sqlite3.connect(self.db_path)
-            cursor = connection.cursor()
-
-            cursor.execute(f"PRAGMA table_info({self.table_name});")
-            columns = [column[1] for column in cursor.fetchall()]
-            if new_col not in columns: # Check if the 'ImageNumber' column exists
-                cursor.execute(f"ALTER TABLE {self.table_name} ADD COLUMN {new_col} {self.column_data_type};")
-            else:
-                print(f"{new_col} column exists")
-
-            # TODO split this reference table into a general helper function
-
-            # Execute query to retrieve rows, columns, fields and channel name from index table
-            cursor.execute(f"SELECT Row, Column, Field, ChannelName, {new_col} FROM {self.table_names[0]};")
-            # Fetch all rows (Row, Column, Field) from the result set
-            reference = cursor.fetchall()
-
-            # Create a dictionary to store unique combinations
-            image_number_dict = {}
-
-            for row, column, field, channel, value in reference:
-
-                # Skip rows with any missing fields
-                if row is None or column is None or field is None or channel is None or value is None:
-                    continue
-
-                key = (row, column, field, channel)
-                # Assign a unique value for each unique key
-                if key not in image_number_dict:
-                    # TODO test this works for image numbers and also group_id etc.
-                    image_number_dict[key] = value
-        
-
-            # Execute query to retrieve rows and columns
-            cursor.execute(f"SELECT Row, Column, Field FROM {self.table_name};")
-            # Fetch all rows (Row, Column, Field) from the result set
-            rows = cursor.fetchall()
-
-            #cur_channel_name = self.channel_link_to_table[self.table_name] # 'HOECHST 33342' or 'Alexa 647'
-
-            # Now update the ImageNumber based on the stored mapping
-            for row_number, column_number, field_number in rows:
-                key = (row_number, column_number, field_number, channel_name)
-                if key in image_number_dict:
-                    new_val = image_number_dict[key]
-                    cursor.execute(f"UPDATE {self.table_name} SET {new_col} = ? WHERE Row = ? AND Column = ? AND Field = ?;",
-                                (new_val, row_number, column_number, field_number))
-            
-            # Commit changes to the database
-            connection.commit()
-            print(f"The {new_col} column updated successfully.")
-
-        except sqlite3.Error as error:
-            print(f"While adding the {new_col} column there was an error doing this {error}")
-
-        finally:
-            # Close cursor and connection
-            if cursor:
-                cursor.close()
-            if connection:
-                connection.close()
-    
-    def add_column_to_object_table_slow_2nd(self, channel_name: str, new_col: str):
-        """
-        Adds any column to each object table and matches col,row,field to the image numbers
-        in the index file corresponding to the proper channel.
-        """
-        try:
-            # Open a connection to the database
-            with sqlite3.connect(self.db_path) as connection:
-                cursor = connection.cursor()
-
-                # Check if the column already exists
-                cursor.execute(f"PRAGMA table_info({self.table_name});")
-                columns = {column[1] for column in cursor.fetchall()}  # Using set for O(1) lookup
-                if new_col not in columns:
-                    cursor.execute(f"ALTER TABLE {self.table_name} ADD COLUMN {new_col} {self.column_data_type};")
-                else:
-                    print(f"{new_col} column already exists")
-
-                # Fetch the data from the index table
-                cursor.execute(f"SELECT Row, Column, Field, ChannelName, {new_col} FROM {self.table_names[0]};")
-                reference = cursor.fetchall()
-
-                # Create a dictionary to store image numbers for unique (row, column, field, channel) combinations
-                image_number_dict = {
-                    (row, column, field, channel): value
-                    for row, column, field, channel, value in reference
-                    if row is not None and column is not None and field is not None and channel is not None and value is not None
-                }
-
-                # Fetch the data from the main table
-                cursor.execute(f"SELECT Row, Column, Field FROM {self.table_name};")
-                rows = cursor.fetchall()
-
-                # Update the new column in the main table based on the dictionary
-                for row_number, column_number, field_number in rows:
-                    key = (row_number, column_number, field_number, channel_name)
-                    if key in image_number_dict:
-                        new_val = image_number_dict[key]
-                        cursor.execute(f"UPDATE {self.table_name} SET {new_col} = ? WHERE Row = ? AND Column = ? AND Field = ?;",
-                                    (new_val, row_number, column_number, field_number))
-
-                # Commit the changes
-                connection.commit()
-                print(f"The {new_col} column updated successfully.")
-
-        except sqlite3.Error as error:
-            print(f"Error occurred while adding the {new_col} column: {error}")
-    
-    def add_column_to_object_table_faster(self, channel_name: str, new_col: str):
-        """
-        Optimized version to add a new column to the object table and populate it based on data from an index table.
-        """
-        try:
-            # Open a connection to the database
-            with sqlite3.connect(self.db_path) as connection:
-                cursor = connection.cursor()
-
-                # Check if the column already exists
-                cursor.execute(f"PRAGMA table_info({self.table_name});")
-                columns = {column[1] for column in cursor.fetchall()}  # Using set for O(1) lookup
-                if new_col not in columns:
-                    cursor.execute(f"ALTER TABLE {self.table_name} ADD COLUMN {new_col} {self.column_data_type};")
-                else:
-                    print(f"{new_col} column already exists")
-
-                # Fetch the data from the index table and join with the main table in a single query
-                # LEFT JOIN: returns all records from the left table (table1), and the matching records from the right table (table2)
-                query = f"""
-                    SELECT t.Row, t.Column, t.Field, i.{new_col}
-                    FROM {self.table_name} t
-                    LEFT JOIN {self.table_names[0]} i
-                    ON t.Row = i.Row AND t.Column = i.Column AND t.Field = i.Field
-                    WHERE i.ChannelName = ?
-                """
-                cursor.execute(query, (channel_name,))
-                rows_to_update = cursor.fetchall()
-
-                # Prepare a bulk update
-                update_data = []
-                for row_number, column_number, field_number, new_val in rows_to_update:
-                    if new_val is not None:  # Only update if new_val is not None
-                        update_data.append((new_val, row_number, column_number, field_number))
-
-                if update_data:
-                    cursor.executemany(f"""
-                        UPDATE {self.table_name} 
-                        SET {new_col} = ? 
-                        WHERE Row = ? AND Column = ? AND Field = ?
-                    """, update_data)
-
-                # Commit the changes
-                connection.commit()
-                print(f"The {new_col} column updated successfully.")
-
-        except sqlite3.Error as error:
-            print(f"Error occurred while adding the {new_col} column: {error}")
-    
-    def drop_column_in_table_slow(self, table_name:str, col_to_del:str):
-
-        try:
-            connection = sqlite3.connect(self.db_path)
-            cursor = connection.cursor()
-
-            cursor.execute(f"PRAGMA table_info({table_name});")
-            columns = [column[1] for column in cursor.fetchall()]
-            
-            if col_to_del not in columns: # Check if the 'ImageNumber' column exists
-                print(f"{col_to_del} doesnt exist")
-                #cursor.execute(f"ALTER TABLE {self.table_name} ADD COLUMN {col_to_del} TEXT;")
-            else:
-                print(f"{col_to_del} column exists")
-
-                cursor.execute(F"ALTER TABLE {table_name} DROP COLUMN '{col_to_del}';")
-            
-            # Commit changes to the database
-            connection.commit()
-            print(f"\nThe {col_to_del} column was deleted successfully.\n")
-
-        except sqlite3.Error as error:
-            print(f"While adding the {col_to_del} column there was an error doing this {error}\n")
-
-        finally:
-            # Close cursor and connection
-            if cursor:
-                cursor.close()
-            if connection:
-                connection.close()
-
-    def add_column_in_table_slow(self, table_name:str, col_to_add:str):
-
-        try:
-            connection = sqlite3.connect(self.db_path)
-            cursor = connection.cursor()
-
-            cursor.execute(f"PRAGMA table_info({table_name});")
-            columns = [column[1] for column in cursor.fetchall()]
-            
-            if col_to_add not in columns: # Check if the 'ImageNumber' column exists
-                #print(f"{col_to_add} doesnt exist")
-                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {col_to_add} {self.column_data_type};") # NUMERIC
-                # Commit changes to the database
-                connection.commit()
-                print(f"The {col_to_add} column updated successfully.")
-            else:
-                print(f"The {col_to_add} column already exists")
-
-        except sqlite3.Error as error:
-            print(f"While adding the {col_to_add} column there was an error doing this {error}")
-
-        finally:
-            # Close cursor and connection
-            if cursor:
-                cursor.close()
-            if connection:
-                connection.close()
     #--------------------Getters----------------------------
     def get_db_path(self):
         return self.db_path

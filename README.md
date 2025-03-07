@@ -9,6 +9,8 @@
 
 ## Instructions
 
+The following instructions are the same if you choose to run the exe, or from the source files located in the src folder
+
 ### Step 1: Export Harmony Data
 
 - First, export your Harmony data (plate results, object results, and images).
@@ -129,7 +131,7 @@ Good luck!
 
 ## Notes for Developers
 
-- If you edit the source code and need to remake the application, run this command in the project folder:
+- If you edit the source code and need to remake the application/exe, run this command in the project folder:
 
 ```
 pyinstaller --onefile --add-data "PropertiesFileTemplate.ini;." main.py

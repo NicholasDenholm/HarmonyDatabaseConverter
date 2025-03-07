@@ -20,11 +20,6 @@ class DatabaseCreator:
         self.results_or_index() 
         self.create_sqlite_table()
         self.insert_data_into_table()
-
-        # Find out why plate results table cant be passed through this correctly?
-        #self.add_plate_map_column_slow()
-        #self.add_well_row_and_col_slow("WellRow")
-        #self.add_well_row_and_col_slow("WellColumn")
         
         print(f"Updating Plate map values for {self.table_name}")
         #TODO this vvv is slow
@@ -69,7 +64,6 @@ class DatabaseCreator:
             #self.rename_columns_Index()
             self.rename_columns_regex()
 
-
     def rename_columns_regex(self):
         """
         Renames DataFrame columns to adhere to database naming rules.
@@ -106,13 +100,9 @@ class DatabaseCreator:
             # Create a cursor object using the connection
             cursor = connection.cursor()
 
-            # Default data type if none is provided (e.g., NUMERIC)
-            #default_type = "NUMERIC"
-
             # Quote the table name to handle reserved keywords and special characters
             quoted_table_name = f'"{self.table_name}"'
             if quoted_table_name.startswith('"Objects_Population'):
-                #quoted_table_name = f'"{quoted_table_name[19:]}'  # Keep the quote before the remaining part
                 quoted_table_name = quoted_table_name.removeprefix("Objects_Population")
                 print(f"{quoted_table_name}")
                 
@@ -126,7 +116,6 @@ class DatabaseCreator:
             # SQL query to create table in SQLite database
             create_table_query = f"CREATE TABLE {quoted_table_name} ({', '.join(columns_with_types)});"
 
-            #print("\nSQL Query: \n", create_table_query) # for debugging
             # Execute SQL query to create table
             cursor.execute(create_table_query)
 
@@ -162,16 +151,12 @@ class DatabaseCreator:
                     print(f"Row values length {len(row_values)} does not match column names length {len(self.column_names)}")
                     continue
 
-                #insert_query = f"INSERT INTO `{self.table_name}` (`{', '.join(self.column_names)}`) VALUES ({', '.join(['?'] * len(row_values))});"
                 insert_query = f"INSERT INTO `{self.table_name}` ({', '.join([f'`{col}`' for col in self.column_names])}) VALUES ({', '.join(['?'] * len(self.column_names))});"
 
-    
                 try:
                     cursor.execute(insert_query, row_values)
                 except sqlite3.Error as e:
                     print(f"An error occurred while inserting row {index}: {e}")
-
-                #cursor.execute(insert_query, row_values)
 
             connection.commit()
             connection.close()
@@ -197,7 +182,6 @@ class DatabaseCreator:
             connection.close()
             print(f"Old table deleted successfully.")
             
-            #self.insert_data_into_table()
             self.insert_data_into_table_fast()
 
         except sqlite3.Error as error:
